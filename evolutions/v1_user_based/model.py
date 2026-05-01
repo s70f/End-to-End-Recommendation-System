@@ -37,11 +37,8 @@ def get_dot_product(user1: int, user2: int, sim_matrix: np.ndarray):
 def calculate_norms(usr_matrix: np.ndarray) -> np.ndarray:
     """Calculates norms for each row/user and stores them in an index sorted 1D array"""
 
-    norms = []
-    for row in usr_matrix:
-        norms.append(np.linalg.norm(row))
-
-    return np.array(norms)
+    # axis 1 means for each row in our matrix
+    return np.linalg.norm(usr_matrix, axis=1)
 
 
 def similarity_matrix(usr_matrix: np.ndarray) -> np.ndarray:
@@ -52,47 +49,29 @@ def similarity_matrix(usr_matrix: np.ndarray) -> np.ndarray:
     Cosine similarity between user i and user j is given by the value at row i, column j.
     """
 
-    sym_matrix = calculate_dot_product(usr_matrix)
+    dot_products = calculate_dot_product(usr_matrix)
     norms = calculate_norms(usr_matrix)
 
-    # Shape is User x User
-    n = usr_matrix.shape[0]
+    denominators = np.outer(norms, norms)
 
-    # Creating empty matrix with known size
-    up_simil_matrix = np.zeros((n, n))
+    sim_matrix = dot_products / denominators
 
-    for row in range(n):
-        for col in range(row, n):
-
-            # Cosine Similarity Formula
-            cosine_sim = get_dot_product(
-                row, col, sym_matrix) / (norms[row] * norms[col])
-
-            up_simil_matrix[row][col] = cosine_sim
-
-    # Reflect the Upper Triangle Matrix to Lower Half
-    simil_matrix = up_simil_matrix + up_simil_matrix.T - \
-        np.diag(np.diag(up_simil_matrix))
-
-    return simil_matrix
+    return sim_matrix
 
 
-def get_weighted_avg(user1: int, item: int, simil_matrix: np.ndarray, usr_matrix: np.ndarray):
+def get_weighted_avg(user_id: int, item_id: int, sim_matrix: np.ndarray, usr_matrix: np.ndarray):
 
-    n = simil_matrix.shape[0]
+    user_sims = sim_matrix[user_id]
 
-    numerator = 0
-    denominator = 0
-    for i in range(n):
-        # Another users rating for movie "item" from 0-5
-        useri_rating_for_item = usr_matrix[i][item]
-        if i != user1 and useri_rating_for_item != 0:
-            # Cosine similarity between user1 and useri
-            cosine_similarity = simil_matrix[user1][i]
-            numerator += cosine_similarity * usr_matrix[i][item]
-            denominator += cosine_similarity
+    movie_ratings = usr_matrix[:, item_id]
 
-    return round(numerator/denominator, 1)
+    numerator = np.sum(user_sims * movie_ratings)  # Another 1D array output
+
+    # Numpy creates an array with T/F values then compares index to index
+    relevant_sims = user_sims[movie_ratings > 0]
+    denominator = np.sum(relevant_sims)
+
+    return round(numerator / denominator, 1) if denominator != 0 else 0
 
 
 if __name__ == '__main__':
