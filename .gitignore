@@ -1,0 +1,9 @@
+# Large data files
+*.csv
+*.zip
+*.parquet
+data/
+
+# Environments
+venv/
+.env
